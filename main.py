@@ -21,7 +21,7 @@ num_classes = 2
 in_features = model.roi_heads.box_predictor.cls_score.in_features
 model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
-checkpoint = torch.load('final_model.pth', map_location=torch.device('cpu'))
+checkpoint = torch.load('final_model.pth', map_location=torch.device('cpu'),weights_only = True)
 model.load_state_dict(checkpoint)
 model.eval()
 
@@ -57,7 +57,7 @@ baseline = torch.zeros_like(input_tensor)
 integrated_gradients = IntegratedGradients(custom_forward)
 
 # Compute attributions
-attributions = integrated_gradients.attribute(input_tensor, baseline, n_steps=200)
+attributions = integrated_gradients.attribute(input_tensor, baseline, n_steps=10)
 
 # Convert attributions to numpy and aggregate over channels
 attributions_np = attributions.squeeze().detach().numpy()
