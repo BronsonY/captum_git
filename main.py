@@ -22,7 +22,7 @@ in_features = model.roi_heads.box_predictor.cls_score.in_features
 model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
 # Load the model checkpoint
-checkpoint = torch.load('final_model.pth', map_location=torch.device('cpu'))
+checkpoint = torch.load('final_model.pth', map_location=torch.device('cpu'), weights_only = True)
 model.load_state_dict(checkpoint)
 model.eval()
 
@@ -104,7 +104,7 @@ for i in range(len(outputs[0]['scores'])):
     total_attributions += attributions
     
 # Convert the accumulated attributions to numpy and aggregate over channels
-attributions_np = total_attributions.squeeze().detach().numpy()
+attributions_np = total_attributions.squeeze().detach().numpy()  # Added detach()
 attributions_sum = np.sum(np.abs(attributions_np), axis=0)
 
 # Normalize the attributions to [0, 1] for better visualization
@@ -133,7 +133,7 @@ noise_tunnel = NoiseTunnel(IntegratedGradients(lambda x: custom_forward(x, 0)))
 smooth_attributions = noise_tunnel.attribute(input_tensor, nt_type='smoothgrad', n_samples=10, stdevs=0.1)
 
 # Convert smooth attributions to numpy for visualization
-smooth_attributions_np = smooth_attributions.squeeze().detach().numpy()
+smooth_attributions_np = smooth_attributions.squeeze().detach().numpy()  # Added detach()
 smooth_attributions_sum = np.sum(np.abs(smooth_attributions_np), axis=0)
 
 # Normalize the smooth attributions
