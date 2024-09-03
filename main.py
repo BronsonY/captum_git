@@ -35,14 +35,13 @@ def preprocess_image(image_path):
     input_img = input_img.unsqueeze(0)  # Add a batch dimension
     return image, input_img
 
-# Define a custom forward function that extracts the desired output
-def custom_forward(input_tensor):
-    outputs = model(input_tensor)  # Get the output dictionary
-    if len(outputs[0]['scores']) > 0:
-        # Return the first score for attribution wrapped in a tensor
-        return outputs[0]['scores'][0].unsqueeze(0)  # Convert to a 1D tensor with one element
-    else:
-        return torch.tensor([0.0])  # Return a tensor with one element if there are no detections
+# Define a custom forward function that extracts the desired output for a specific detection
+def custom_forward(input_tensor, index):
+        outputs = model(input_tensor)
+        if len(outputs[0]['scores']) > index:
+            return outputs[0]['scores'][index].unsqueeze(0)
+        else:
+            return torch.tensor([0.0])
 
 # Specify the path to your image file
 image_path = 'form.jpeg'
@@ -53,18 +52,23 @@ original_image, input_tensor = preprocess_image(image_path)
 # Define the baseline, often zeros or some other meaningful baseline for the domain
 baseline = torch.zeros_like(input_tensor)
 
-# Instantiate the IntegratedGradients object with the custom forward function
-integrated_gradients = IntegratedGradients(custom_forward)
+# Initialize the total attributions tensor
+total_attributions = torch.zeros_like(input_tensor)
 
-# Compute attributions
-attributions = integrated_gradients.attribute(input_tensor, baseline, n_steps=10)
-
-# Convert attributions to numpy and aggregate over channels
-attributions_np = attributions.squeeze().detach().numpy()
+# Compute attributions for each detection and accumulate them
+outputs = model(input_tensor)
+for i in range(len(outputs[0]['scores'])):
+        integrated_gradients = IntegratedGradients(lambda x: custom_forward(x, i))
+        attributions = integrated_gradients.attribute(input_tensor, baseline, n_steps=5)
+        total_attributions += attributions
+                    
+# Convert the accumulated attributions to numpy and aggregate over channels
+attributions_np = total_attributions.squeeze().detach().numpy()
 attributions_sum = np.sum(np.abs(attributions_np), axis=0)
 
 # Normalize the attributions to [0, 1] for better visualization
 attributions_norm = (attributions_sum - attributions_sum.min()) / (attributions_sum.max() - attributions_sum.min())
+
 
 # Create a heatmap of attributions
 plt.figure(figsize=(8, 8))
